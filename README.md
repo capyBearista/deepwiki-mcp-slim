@@ -1,7 +1,7 @@
 # DeepWiki MCP Clean
 
-A tiny stdio MCP server that exposes DeepWiki's three public wiki tools without
-forwarding its verbose MCP initialization instructions (including irrelevant `devin_*` guidance).
+A tiny stdio MCP server that exposes DeepWiki's three public wiki tools while
+preserving its initialization instructions **except** for irrelevant `devin_*` guidance.
 
 This is a narrow, tools-only proof of concept; it does not proxy MCP resources,
 prompts, server-to-client notifications, authentication, or cancellation to upstream.
@@ -52,30 +52,32 @@ Keep the `deepwiki` name so OMOS per-agent MCP assignment still matches.
 
 ## Oh My Pi (OMP)
 
-OMP can suppress server instructions without a wrapper. Put the following in
-`~/.omp/agent/mcp.json` (assuming you want a native OMP definition):
+You can use this same stdio proxy in OMP by registering
+`deepwiki-mcp-clean` in `~/.omp/agent/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "deepwiki": {
-      "type": "http",
-      "url": "https://mcp.deepwiki.com/mcp",
-      "instructions": false
+      "type": "stdio",
+      "command": "deepwiki-mcp-clean",
+      "args": []
     }
   }
 }
 ```
 
-Alternatively use the same `deepwiki-mcp-clean` stdio executable in OMP. OMP's
-MCP discovery may import MCP configs from other harnesses; use `/mcp list`
-to check which source actually wins.
+OMP also supports `instructions: false` for a direct remote connection, but
+**do not use that option for this goal**: it suppresses *all* DeepWiki
+instructions, whereas this proxy preserves the non-Devin guidance.
+OMP may also import MCP configs from other harnesses; use `/mcp list`
+to check which source is active.
 
 ## Verify after installing dependencies
 
 - Run `npx @modelcontextprotocol/inspector deepwiki-mcp-clean` to inspect tools and call one.
 - Expected exactly three names: `ask_wiki_question`, `read_wiki_contents`, `read_wiki_structure`.
-- Check OpenCode's next raw request: no `devin_*` server instructions.
+- Check OpenCode's next raw request: ordinary DeepWiki instructions remain, but no `devin_*` guidance is included.
 - Claude Code: `/mcp` and try a public repository question via DeepWiki.
 - OpenCode: `opencode mcp list`, then try a public repository question.
 - OMP: `/mcp list` and `/mcp test deepwiki`.
@@ -87,5 +89,15 @@ relay. It intentionally does not expose other capabilities that an upstream MCP
 server may add later; that is useful for keeping a fixed small context surface,
 but update the allowlist deliberately if DeepWiki changes public tools.
 
-The source was corrected for the published MCP SDK v2 surface and syntax-checked with `node --check`, but not runtime-tested here:
-this environment cannot reach the npm registry or the upstream DeepWiki endpoint.
+Run `npm test` to verify the instruction filter. The updated proxy has not
+been tested end-to-end against the live DeepWiki service here.
+
+## Instruction filtering
+
+`src/filter-instructions.mjs` removes any upstream instruction line containing
+a `devin_*` tool reference, including the Devin OAuth/organization preface
+from the captured response. It retains the general DeepWiki guidance and the
+ordinary wiki-tool instructions.
+
+If upstream changes to multi-line Devin paragraphs without repeating a
+`devin_*` identifier, the filter and tests will need to be adjusted.
