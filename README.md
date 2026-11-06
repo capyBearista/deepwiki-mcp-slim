@@ -59,38 +59,77 @@ No DeepWiki API key is required for the public endpoint used by this project. Th
 
 ## Installation
 
-Clone the repository and install its locked dependencies:
+**After the package is first published to npm**, you do not need to clone this repository on each machine. Choose one of the following approaches.
+
+### Option A: Global install
+
+Recommended when you prefer quick, predictable startup:
+
+```bash
+npm install -g @capybearista/deepwiki-mcp-clean
+deepwiki-mcp-clean
+```
+
+The command starts a stdio MCP server and waits for a client to connect. **It is normal for it to print nothing**; stop it with Ctrl+C if you launched it manually. In your harness configuration, use the command `deepwiki-mcp-clean` without launching it yourself.
+
+Upgrade intentionally with:
+
+```bash
+npm install -g @capybearista/deepwiki-mcp-clean@latest
+```
+
+### Option B: Run with npx
+
+No global install or clone required:
+
+```bash
+npx -y @capybearista/deepwiki-mcp-clean@0.1.3
+```
+
+This installs the requested package into npm's cache when needed, then starts the MCP server. Use that command in the harness configuration instead of running it manually.
+
+**Version pinning is recommended for coding agents.** Without the explicit `@0.1.3` version, a later launch can resolve a newer release unexpectedly. `-y` disables npm's install confirmation prompt, so use it only for a package you trust.
+
+| | Global install | npx with pinned version |
+| --- | --- | --- |
+| One-time installation | Required on each machine | Not required |
+| Launch overhead | Lower | npm startup and package resolution/cache checks |
+| Offline reliability | Installed command works; DeepWiki still needs network | Also requires the package to be present in the npm cache |
+| Updates | You choose when to reinstall | You choose when to change the version in config |
+| Best fit | Frequently launched local agents | Shared, portable MCP configurations |
+
+Neither method removes the proxy's requirement to contact DeepWiki's upstream HTTPS service. The package must be available on npm before either of these commands will work.
+
+### Install from source (development)
 
 ```bash
 git clone https://github.com/capyBearista/deepwiki-mcp-clean.git
 cd deepwiki-mcp-clean
 npm ci
+npm test
 npm link
 ```
 
-Check that the executable resolves:
+`npm link` makes the local checkout's executable available to harnesses using the same Node/npm installation.
 
-```bash
-command -v deepwiki-mcp-clean
-npm test
-```
+### Notes on environments
 
-`npm link` makes the `deepwiki-mcp-clean` command available to programs using the same Node/npm installation. Install or link it separately in each environment where a coding harness runs (for example, Windows and WSL are separate environments).
+Node.js 20+ and npm must be installed in **each environment where your coding harness runs** (for example, native Windows and WSL are separate environments). Ensure the harness can find `npx` or `deepwiki-mcp-clean` on its `PATH`. You can inspect the resolved command with `command -v` on Linux/macOS or `where.exe` on Windows.
 
-**Linux/WSL troubleshooting:** If your MCP client reports `spawn deepwiki-mcp-clean EACCES`, confirm the entrypoint is executable:
+If a source checkout reports `spawn deepwiki-mcp-clean EACCES` on Linux, check the executable bit:
 
 ```bash
 ls -l src/index.mjs
 chmod +x src/index.mjs
 ```
 
-The repository tracks that file as executable; the `chmod` command is a recovery step if permissions were lost during copying or extraction.
+The repository tracks `src/index.mjs` as executable. Published npm CLI binaries receive npm's platform-specific executable linking/shims.
 
 ## Configure a coding harness
 
 Configure **`deepwiki-mcp-clean` as a local/stdio server named `deepwiki`**. Replace any existing DeepWiki connection rather than registering both, or your agent may still receive the unfiltered server instructions.
 
-If your coding harness does not inherit npm's executable directory in its `PATH`, use the absolute path returned by `command -v deepwiki-mcp-clean`.
+For **npx** instead of a global install, replace the command with `["npx", "-y", "@capybearista/deepwiki-mcp-clean@0.1.3"]` in OpenCode, or use `"command": "npx", "args": ["-y", "@capybearista/deepwiki-mcp-clean@0.1.3"]` in other stdio MCP clients. In either case, make sure the harness can find the executable on `PATH`.
 
 ### OpenCode V2
 
@@ -199,15 +238,33 @@ Connect through the Inspector and check:
 npm ci
 npm test
 node --check src/index.mjs
+npm pack --dry-run
 ```
+
+`npm pack --dry-run` previews the published tarball. Only the `src/` directory and npm's required metadata and README should be included. The package's `prepublishOnly` script runs the tests before publication. The local MCP server reports the version directly from `package.json` instead of a separate hardcoded value.
 
 | File | Responsibility |
 | --- | --- |
 | `src/index.mjs` | Connects to DeepWiki, registers the local MCP server, and forwards allowlisted tools |
 | `src/filter-instructions.mjs` | Filters unavailable-tool instructions |
 | `test/filter-instructions.test.mjs` | Regression tests for instruction filtering |
+| `test/package.test.mjs` | Checks npm package metadata and the CLI entrypoint |
 
 The executable uses stdout for the MCP JSON-RPC protocol. If you add diagnostic logging, send it to **stderr**, never stdout.
+
+### Manual npm publishing
+
+No release workflow is configured; publishes are performed explicitly by a maintainer.
+
+1. Check that the npm account controls the `@capybearista` scope; the matching GitHub username does **not** automatically grant access.
+2. Run `npm login` and `npm whoami` to authenticate, with npm's required two-factor protection.
+3. Run `npm ci && npm test && npm pack --dry-run` and review the tarball preview.
+4. Run `npm publish --access public` from the repository checkout.
+5. Confirm the published release with `npm view @capybearista/deepwiki-mcp-clean version`.
+
+Each npm version can be published only once. For subsequent releases, update the version using `npm version patch` (or minor/major), publish the new version, and push the commit and Git tag with `git push --follow-tags`.
+
+**Before the first publish:** No open-source license has been selected for this repository. Consider adding a `LICENSE` file if you want to grant reuse rights explicitly; publishing a package publicly does not by itself choose a license.
 
 ## Status
 

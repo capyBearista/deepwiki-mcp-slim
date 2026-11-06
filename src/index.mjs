@@ -1,8 +1,11 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { filterUnavailableToolInstructions } from "./filter-instructions.mjs";
+
+const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
 const allowed = new Set([
   "ask_wiki_question",
@@ -11,7 +14,7 @@ const allowed = new Set([
 ]);
 
 // Preserve DeepWiki instructions, excluding guidance for unavailable tools.
-const upstream = new Client({ name: "deepwiki-mcp-clean", version: "0.1.0" });
+const upstream = new Client({ name: "deepwiki-mcp-clean", version });
 await upstream.connect(
   new StreamableHTTPClientTransport(new URL("https://mcp.deepwiki.com/mcp")),
 );
@@ -19,7 +22,7 @@ await upstream.connect(
 // Forward the selectively filtered upstream instructions during initialization.
 const instructions = filterUnavailableToolInstructions(upstream.getInstructions());
 const mcp = new McpServer(
-  { name: "deepwiki-mcp-clean", version: "0.1.3" },
+  { name: "deepwiki-mcp-clean", version },
   { instructions },
 );
 // Use the documented underlying protocol server for precise tool forwarding.

@@ -1,19 +1,45 @@
 {
   "name": "@capybearista/deepwiki-mcp-clean",
-  "private": true,
   "version": "0.1.3",
+  "description": "DeepWiki MCP proxy that preserves public wiki instructions and filters unavailable tools.",
+  "keywords": [
+    "deepwiki",
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "mcp-proxy",
+    "ai-agents",
+    "claude-code",
+    "opencode",
+    "oh-my-pi"
+  ],
   "type": "module",
   "bin": {
     "deepwiki-mcp-clean": "./src/index.mjs"
   },
+  "files": [
+    "src/"
+  ],
   "engines": {
     "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/capyBearista/deepwiki-mcp-clean.git"
+  },
+  "homepage": "https://github.com/capyBearista/deepwiki-mcp-clean#readme",
+  "bugs": {
+    "url": "https://github.com/capyBearista/deepwiki-mcp-clean/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --test",
+    "prepublishOnly": "npm test"
   },
   "dependencies": {
     "@modelcontextprotocol/client": "2.4.0",
     "@modelcontextprotocol/server": "2.4.0"
-  },
-  "scripts": {
-    "test": "node --test"
   }
 }
