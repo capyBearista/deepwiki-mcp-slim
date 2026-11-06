@@ -238,10 +238,9 @@ Connect through the Inspector and check:
 npm ci
 npm test
 node --check src/index.mjs
-npm pack --dry-run
 ```
 
-`npm pack --dry-run` previews the published tarball. Only the `src/` directory and npm's required metadata and README should be included. The package's `prepublishOnly` script runs the tests before publication. The local MCP server reports the version directly from `package.json` instead of a separate hardcoded value.
+The local MCP server reads its version from `package.json` instead of a separate hardcoded value.
 
 | File | Responsibility |
 | --- | --- |
@@ -251,23 +250,5 @@ npm pack --dry-run
 | `test/package.test.mjs` | Checks npm package metadata and the CLI entrypoint |
 
 The executable uses stdout for the MCP JSON-RPC protocol. If you add diagnostic logging, send it to **stderr**, never stdout.
-
-### Manual npm publishing
-
-No release workflow is configured; publishes are performed explicitly by a maintainer.
-
-1. Check that the npm account controls the `@capybearista` scope; the matching GitHub username does **not** automatically grant access.
-2. Run `npm login` and `npm whoami` to authenticate, with npm's required two-factor protection.
-3. Run `npm ci && npm test && npm pack --dry-run` and review the tarball preview.
-4. Run `npm publish --access public` from the repository checkout.
-5. Confirm the published release with `npm view @capybearista/deepwiki-mcp-clean version`.
-
-Each npm version can be published only once. For subsequent releases, update the version using `npm version patch` (or minor/major), publish the new version, and push the commit and Git tag with `git push --follow-tags`.
-
-**Before the first publish:** No open-source license has been selected for this repository. Consider adding a `LICENSE` file if you want to grant reuse rights explicitly; publishing a package publicly does not by itself choose a license.
-
-## Status
-
-Early-stage, focused utility. The goal is deliberately narrow: **make the public DeepWiki MCP easier for coding agents to use without losing its useful initialization instructions**.
 
 This project is not affiliated with DeepWiki or Devin.
