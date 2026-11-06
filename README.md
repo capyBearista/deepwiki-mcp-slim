@@ -1,7 +1,8 @@
 # DeepWiki MCP Clean
 
 A tiny stdio MCP server that exposes DeepWiki's three public wiki tools while
-preserving its initialization instructions **except** for irrelevant `devin_*` guidance.
+preserving its initialization instructions **except** for references to unavailable tools
+(`devin_*`, `list_wiki_repos`, and `generate_wiki`).
 
 This is a narrow, tools-only proof of concept; it does not proxy MCP resources,
 prompts, server-to-client notifications, authentication, or cancellation to upstream.
@@ -69,7 +70,7 @@ You can use this same stdio proxy in OMP by registering
 
 OMP also supports `instructions: false` for a direct remote connection, but
 **do not use that option for this goal**: it suppresses *all* DeepWiki
-instructions, whereas this proxy preserves the non-Devin guidance.
+instructions, whereas this proxy preserves guidance for public tools.
 OMP may also import MCP configs from other harnesses; use `/mcp list`
 to check which source is active.
 
@@ -77,7 +78,7 @@ to check which source is active.
 
 - Run `npx @modelcontextprotocol/inspector deepwiki-mcp-clean` to inspect tools and call one.
 - Expected exactly three names: `ask_wiki_question`, `read_wiki_contents`, `read_wiki_structure`.
-- Check OpenCode's next raw request: ordinary DeepWiki instructions remain, but no `devin_*` guidance is included.
+- Check OpenCode's next raw request: ordinary DeepWiki instructions remain, but no `devin_*`, `list_wiki_repos`, or `generate_wiki` guidance is included.
 - Claude Code: `/mcp` and try a public repository question via DeepWiki.
 - OpenCode: `opencode mcp list`, then try a public repository question.
 - OMP: `/mcp list` and `/mcp test deepwiki`.
@@ -94,10 +95,10 @@ been tested end-to-end against the live DeepWiki service here.
 
 ## Instruction filtering
 
-`src/filter-instructions.mjs` removes any upstream instruction line containing
-a `devin_*` tool reference, including the Devin OAuth/organization preface
-from the captured response. It retains the general DeepWiki guidance and the
-ordinary wiki-tool instructions.
+`src/filter-instructions.mjs` removes upstream instruction lines referring to
+`devin_*`, `list_wiki_repos`, or `generate_wiki`, including the Devin
+OAuth/organization preface from the captured response. It retains general
+DeepWiki guidance and instructions for the three public wiki tools.
 
-If upstream changes to multi-line Devin paragraphs without repeating a
-`devin_*` identifier, the filter and tests will need to be adjusted.
+If upstream changes to multi-line private-mode paragraphs without repeating a
+filtered tool identifier, the filter and tests will need to be adjusted.

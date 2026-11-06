@@ -2,7 +2,7 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
-import { filterDevinInstructions } from "./filter-instructions.mjs";
+import { filterUnavailableToolInstructions } from "./filter-instructions.mjs";
 
 const allowed = new Set([
   "ask_wiki_question",
@@ -10,16 +10,16 @@ const allowed = new Set([
   "read_wiki_structure",
 ]);
 
-// Preserve public DeepWiki instructions, excluding Devin-specific guidance.
+// Preserve DeepWiki instructions, excluding guidance for unavailable tools.
 const upstream = new Client({ name: "deepwiki-mcp-clean", version: "0.1.0" });
 await upstream.connect(
   new StreamableHTTPClientTransport(new URL("https://mcp.deepwiki.com/mcp")),
 );
 
 // Forward the selectively filtered upstream instructions during initialization.
-const instructions = filterDevinInstructions(upstream.getInstructions());
+const instructions = filterUnavailableToolInstructions(upstream.getInstructions());
 const mcp = new McpServer(
-  { name: "deepwiki-mcp-clean", version: "0.1.2" },
+  { name: "deepwiki-mcp-clean", version: "0.1.3" },
   { instructions },
 );
 // Use the documented underlying protocol server for precise tool forwarding.

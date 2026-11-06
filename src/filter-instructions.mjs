@@ -1,13 +1,13 @@
-// Keep DeepWiki's instructions while removing Devin-only guidance.
-// The observed upstream response puts each Devin tool and its OAuth/org
-// preface on a single line containing a devin_* reference.
-const DEVIN_TOOL = /(?:^|[^\w])devin_(?:\*|[a-z0-9_]+)/i;
+// Retain DeepWiki guidance while omitting tools unavailable through its public MCP.
+// The observed server instructions contain one line per tool, plus a Devin-only
+// organization/OAuth preface mentioning devin_*.
+const UNAVAILABLE_TOOL = /(?:^|[^\w])(?:devin_(?:\*|[a-z0-9_]+)|list_wiki_repos|generate_wiki)(?!\w)/i;
 
-export function filterDevinInstructions(instructions) {
+export function filterUnavailableToolInstructions(instructions) {
   if (!instructions) return undefined;
   const filtered = instructions
     .split(/\r?\n/)
-    .filter((line) => !DEVIN_TOOL.test(line))
+    .filter((line) => !UNAVAILABLE_TOOL.test(line))
     .join("\n")
     .replace(/\n(?:[ \t]*\n){2,}/g, "\n\n")
     .trim();
