@@ -14,7 +14,7 @@ const allowed = new Set([
 ]);
 
 // Preserve DeepWiki instructions, excluding guidance for unavailable tools.
-const upstream = new Client({ name: "deepwiki-mcp-clean", version });
+const upstream = new Client({ name: "deepwiki-mcp-slim", version });
 await upstream.connect(
   new StreamableHTTPClientTransport(new URL("https://mcp.deepwiki.com/mcp")),
 );
@@ -22,7 +22,7 @@ await upstream.connect(
 // Forward the selectively filtered upstream instructions during initialization.
 const instructions = filterUnavailableToolInstructions(upstream.getInstructions());
 const mcp = new McpServer(
-  { name: "deepwiki-mcp-clean", version },
+  { name: "deepwiki-mcp-slim", version },
   { instructions },
 );
 // Use the documented underlying protocol server for precise tool forwarding.

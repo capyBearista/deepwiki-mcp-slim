@@ -1,4 +1,4 @@
-# DeepWiki MCP Clean
+# DeepWiki MCP Slim
 
 A small, unofficial [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) proxy for [DeepWiki](https://deepwiki.com/). It exposes the three public DeepWiki wiki tools while removing instructions about unavailable private-mode and Devin tools.
 
@@ -10,7 +10,7 @@ DeepWiki's public MCP endpoint exposes three wiki tools, but its server initiali
 
 This proxy gives an MCP client a smaller, consistent view:
 
-| | Direct DeepWiki | DeepWiki MCP Clean |
+| | Direct DeepWiki | DeepWiki MCP Slim |
 | --- | --- | --- |
 | Public wiki tools | 3 | Same 3 |
 | General DeepWiki instructions | Included | Preserved |
@@ -27,7 +27,7 @@ Coding agent (OpenCode / Claude Code / OMP / another MCP client)
        |
        | MCP over stdio
        v
-deepwiki-mcp-clean (local Node.js process)
+deepwiki-mcp-slim (local Node.js process)
        |   - allowlist public tools
        |   - filter initialization instructions
        |   - forward tool calls and responses
@@ -66,16 +66,16 @@ No DeepWiki API key is required for the public endpoint used by this project. Th
 Recommended when you prefer quick, predictable startup:
 
 ```bash
-npm install -g @capybearista/deepwiki-mcp-clean
-deepwiki-mcp-clean
+npm install -g deepwiki-mcp-slim
+deepwiki-mcp-slim
 ```
 
-The command starts a stdio MCP server and waits for a client to connect. **It is normal for it to print nothing**; stop it with Ctrl+C if you launched it manually. In your harness configuration, use the command `deepwiki-mcp-clean` without launching it yourself.
+The command starts a stdio MCP server and waits for a client to connect. **It is normal for it to print nothing**; stop it with Ctrl+C if you launched it manually. In your harness configuration, use the command `deepwiki-mcp-slim` without launching it yourself.
 
 Upgrade intentionally with:
 
 ```bash
-npm install -g @capybearista/deepwiki-mcp-clean@latest
+npm install -g deepwiki-mcp-slim@latest
 ```
 
 ### Option B: Run with npx
@@ -83,7 +83,7 @@ npm install -g @capybearista/deepwiki-mcp-clean@latest
 No global install or clone required:
 
 ```bash
-npx -y @capybearista/deepwiki-mcp-clean@0.1.3
+npx -y deepwiki-mcp-slim@0.1.3
 ```
 
 This installs the requested package into npm's cache when needed, then starts the MCP server. Use that command in the harness configuration instead of running it manually.
@@ -103,8 +103,8 @@ Neither method removes the proxy's requirement to contact DeepWiki's upstream HT
 ### Install from source (development)
 
 ```bash
-git clone https://github.com/capyBearista/deepwiki-mcp-clean.git
-cd deepwiki-mcp-clean
+git clone https://github.com/capyBearista/deepwiki-mcp-slim.git
+cd deepwiki-mcp-slim
 npm ci
 npm test
 npm link
@@ -114,9 +114,9 @@ npm link
 
 ### Notes on environments
 
-Node.js 20+ and npm must be installed in **each environment where your coding harness runs** (for example, native Windows and WSL are separate environments). Ensure the harness can find `npx` or `deepwiki-mcp-clean` on its `PATH`. You can inspect the resolved command with `command -v` on Linux/macOS or `where.exe` on Windows.
+Node.js 20+ and npm must be installed in **each environment where your coding harness runs** (for example, native Windows and WSL are separate environments). Ensure the harness can find `npx` or `deepwiki-mcp-slim` on its `PATH`. You can inspect the resolved command with `command -v` on Linux/macOS or `where.exe` on Windows.
 
-If a source checkout reports `spawn deepwiki-mcp-clean EACCES` on Linux, check the executable bit:
+If a source checkout reports `spawn deepwiki-mcp-slim EACCES` on Linux, check the executable bit:
 
 ```bash
 ls -l src/index.mjs
@@ -127,9 +127,9 @@ The repository tracks `src/index.mjs` as executable. Published npm CLI binaries 
 
 ## Configure a coding harness
 
-Configure **`deepwiki-mcp-clean` as a local/stdio server named `deepwiki`**. Replace any existing DeepWiki connection rather than registering both, or your agent may still receive the unfiltered server instructions.
+Configure **`deepwiki-mcp-slim` as a local/stdio server named `deepwiki`**. Replace any existing DeepWiki connection rather than registering both, or your agent may still receive the unfiltered server instructions.
 
-For **npx** instead of a global install, replace the command with `["npx", "-y", "@capybearista/deepwiki-mcp-clean@0.1.3"]` in OpenCode, or use `"command": "npx", "args": ["-y", "@capybearista/deepwiki-mcp-clean@0.1.3"]` in other stdio MCP clients. In either case, make sure the harness can find the executable on `PATH`.
+For **npx** instead of a global install, replace the command with `["npx", "-y", "deepwiki-mcp-slim@0.1.3"]` in OpenCode, or use `"command": "npx", "args": ["-y", "deepwiki-mcp-slim@0.1.3"]` in other stdio MCP clients. In either case, make sure the harness can find the executable on `PATH`.
 
 ### OpenCode V2
 
@@ -141,7 +141,7 @@ In `opencode.jsonc`, replace the `deepwiki` entry under **`mcp.servers`**:
     "servers": {
       "deepwiki": {
         "type": "local",
-        "command": ["deepwiki-mcp-clean"]
+        "command": ["deepwiki-mcp-slim"]
       }
     }
   }
@@ -161,7 +161,7 @@ For a regular MCP configuration or a plugin's `.mcp.json`, replace the existing 
   "mcpServers": {
     "deepwiki": {
       "type": "stdio",
-      "command": "deepwiki-mcp-clean",
+      "command": "deepwiki-mcp-slim",
       "args": []
     }
   }
@@ -181,7 +181,7 @@ In `~/.omp/agent/mcp.json`:
   "mcpServers": {
     "deepwiki": {
       "type": "stdio",
-      "command": "deepwiki-mcp-clean",
+      "command": "deepwiki-mcp-slim",
       "args": []
     }
   }
@@ -197,7 +197,7 @@ See [OMP MCP configuration](https://github.com/can1357/oh-my-pi/blob/main/docs/m
 Any MCP client supporting local stdio servers can launch the same executable. The essential settings are:
 
 - **Transport:** stdio
-- **Command:** `deepwiki-mcp-clean`
+- **Command:** `deepwiki-mcp-slim`
 - **Server name:** `deepwiki` (recommended for compatibility)
 
 No always-running daemon or separate HTTP port is needed. The coding harness starts and stops its own local proxy process.
@@ -213,7 +213,7 @@ npm test
 These test the instruction filter only. To inspect the running MCP server:
 
 ```bash
-npx @modelcontextprotocol/inspector deepwiki-mcp-clean
+npx @modelcontextprotocol/inspector deepwiki-mcp-slim
 ```
 
 Connect through the Inspector and check:

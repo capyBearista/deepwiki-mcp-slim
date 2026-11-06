@@ -1,5 +1,5 @@
 {
-  "name": "@capybearista/deepwiki-mcp-clean",
+  "name": "deepwiki-mcp-slim",
   "version": "0.1.3",
   "description": "DeepWiki MCP proxy that preserves public wiki instructions and filters unavailable tools.",
   "keywords": [
@@ -15,7 +15,7 @@
   ],
   "type": "module",
   "bin": {
-    "deepwiki-mcp-clean": "./src/index.mjs"
+    "deepwiki-mcp-slim": "./src/index.mjs"
   },
   "files": [
     "src/"
@@ -25,11 +25,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/capyBearista/deepwiki-mcp-clean.git"
+    "url": "git+https://github.com/capyBearista/deepwiki-mcp-slim.git"
   },
-  "homepage": "https://github.com/capyBearista/deepwiki-mcp-clean#readme",
+  "homepage": "https://github.com/capyBearista/deepwiki-mcp-slim#readme",
   "bugs": {
-    "url": "https://github.com/capyBearista/deepwiki-mcp-clean/issues"
+    "url": "https://github.com/capyBearista/deepwiki-mcp-slim/issues"
   },
   "publishConfig": {
     "access": "public"
