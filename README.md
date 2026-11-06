@@ -1,60 +1,121 @@
 # DeepWiki MCP Clean
 
-A tiny stdio MCP server that exposes DeepWiki's three public wiki tools while
-preserving its initialization instructions **except** for references to unavailable tools
-(`devin_*`, `list_wiki_repos`, and `generate_wiki`).
+A small, unofficial [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) proxy for [DeepWiki](https://deepwiki.com/). It exposes the three public DeepWiki wiki tools while removing instructions about unavailable private-mode and Devin tools.
 
-This is a narrow, tools-only proof of concept; it does not proxy MCP resources,
-prompts, server-to-client notifications, authentication, or cancellation to upstream.
+**Keep the useful DeepWiki instructions, without advertising tools the agent cannot use.**
 
-## Install (Node 20+)
+## Why this exists
 
-Clone or copy into a standalone project directory, e.g. `~/src/deepwiki-mcp-clean`.
+DeepWiki's public MCP endpoint exposes three wiki tools, but its server initialization instructions can mention additional tools that are not available through that endpoint. Coding agents may receive those instructions even though the tools are absent from their tool list.
 
-```sh
-cd ~/src/deepwiki-mcp-clean
-npm install
+This proxy gives an MCP client a smaller, consistent view:
+
+| | Direct DeepWiki | DeepWiki MCP Clean |
+| --- | --- | --- |
+| Public wiki tools | 3 | Same 3 |
+| General DeepWiki instructions | Included | Preserved |
+| `devin_*` references | May be included | Removed |
+| `list_wiki_repos` and `generate_wiki` references | May be included | Removed |
+| Tool arguments and responses | From DeepWiki | Forwarded unchanged |
+
+The proxy **does not run DeepWiki locally**. It connects to `https://mcp.deepwiki.com/mcp` for every local MCP server process.
+
+## How it works
+
+```text
+Coding agent (OpenCode / Claude Code / OMP / another MCP client)
+       |
+       | MCP over stdio
+       v
+deepwiki-mcp-clean (local Node.js process)
+       |   - allowlist public tools
+       |   - filter initialization instructions
+       |   - forward tool calls and responses
+       |
+       | MCP over Streamable HTTP
+       v
+https://mcp.deepwiki.com/mcp
+```
+
+On startup, the proxy connects to DeepWiki, reads its initialization instructions, removes lines referring to unavailable tools, and advertises the remaining instructions to the local MCP client. It then forwards requests for these three tools:
+
+| Tool | Purpose |
+| --- | --- |
+| `ask_wiki_question` | Ask a question about a repository |
+| `read_wiki_contents` | Read repository wiki content |
+| `read_wiki_structure` | Explore the structure of a repository's wiki |
+
+The filter currently removes any instruction **line** containing a `devin_*` name, `list_wiki_repos`, or `generate_wiki`. It also removes the observed Devin OAuth/organization preface because that line refers to `devin_*`.
+
+This is a **fixed tool allowlist**, not automatic discovery of all future public DeepWiki tools.
+
+## Requirements
+
+- Node.js **20 or newer** and npm
+- Network access to `https://mcp.deepwiki.com/mcp`
+- An MCP client that can launch a **stdio** server
+
+No DeepWiki API key is required for the public endpoint used by this project. This proxy does not implement private-mode or upstream OAuth authentication.
+
+## Installation
+
+Clone the repository and install its locked dependencies:
+
+```bash
+git clone https://github.com/capyBearista/deepwiki-mcp-clean.git
+cd deepwiki-mcp-clean
+npm ci
 npm link
+```
+
+Check that the executable resolves:
+
+```bash
 command -v deepwiki-mcp-clean
+npm test
 ```
 
-Do not run the executable interactively expecting output: it waits for stdio MCP requests.
-Never log to stdout in an MCP stdio server; stdout belongs to JSON-RPC.
+`npm link` makes the `deepwiki-mcp-clean` command available to programs using the same Node/npm installation. Install or link it separately in each environment where a coding harness runs (for example, Windows and WSL are separate environments).
 
-## Claude Code `claude-workflow/.mcp.json`
+**Linux/WSL troubleshooting:** If your MCP client reports `spawn deepwiki-mcp-clean EACCES`, confirm the entrypoint is executable:
 
-Replace only the `deepwiki` entry:
-
-```json
-"deepwiki": {
-  "type": "stdio",
-  "command": "deepwiki-mcp-clean",
-  "args": []
-}
+```bash
+ls -l src/index.mjs
+chmod +x src/index.mjs
 ```
 
-The `shared-workflow` plugin distributes its `.mcp.json`, so edit the plugin
-repository, not `.agents`' synchronization paths. Its `tests/test_mcp_config.py`
-currently assumes every MCP is `http`; adjust the assertion to permit DeepWiki
-as stdio, while preserving the other HTTP server checks.
+The repository tracks that file as executable; the `chmod` command is a recovery step if permissions were lost during copying or extraction.
 
-## OpenCode V2 `opencode.jsonc`
+## Configure a coding harness
 
-Replace only the `mcp.servers.deepwiki` definition:
+Configure **`deepwiki-mcp-clean` as a local/stdio server named `deepwiki`**. Replace any existing DeepWiki connection rather than registering both, or your agent may still receive the unfiltered server instructions.
+
+If your coding harness does not inherit npm's executable directory in its `PATH`, use the absolute path returned by `command -v deepwiki-mcp-clean`.
+
+### OpenCode V2
+
+In `opencode.jsonc`, replace the `deepwiki` entry under **`mcp.servers`**:
 
 ```jsonc
-"deepwiki": {
-  "type": "local",
-  "command": ["deepwiki-mcp-clean"]
+{
+  "mcp": {
+    "servers": {
+      "deepwiki": {
+        "type": "local",
+        "command": ["deepwiki-mcp-clean"]
+      }
+    }
+  }
 }
 ```
 
-Keep the `deepwiki` name so OMOS per-agent MCP assignment still matches.
+Merge this into your existing configuration; do not replace unrelated MCP servers. Retaining the `deepwiki` server name also preserves references to that server in agent-specific MCP assignments.
 
-## Oh My Pi (OMP)
+See the [OpenCode V2 MCP documentation](https://opencode.ai/v2/docs/mcp-servers).
 
-You can use this same stdio proxy in OMP by registering
-`deepwiki-mcp-clean` in `~/.omp/agent/mcp.json`:
+### Claude Code (including plugins)
+
+For a regular MCP configuration or a plugin's `.mcp.json`, replace the existing `deepwiki` entry:
 
 ```json
 {
@@ -68,37 +129,88 @@ You can use this same stdio proxy in OMP by registering
 }
 ```
 
-OMP also supports `instructions: false` for a direct remote connection, but
-**do not use that option for this goal**: it suppresses *all* DeepWiki
-instructions, whereas this proxy preserves guidance for public tools.
-OMP may also import MCP configs from other harnesses; use `/mcp list`
-to check which source is active.
+If DeepWiki is supplied by a **Claude Code plugin**, change the plugin's own `.mcp.json`; editing an unrelated user-level MCP entry won't replace the plugin-bundled server. Each machine running the plugin must also have the executable installed. Repository tests or validation scripts that require all MCPs to be HTTP must be updated to permit this stdio server.
 
-## Verify after installing dependencies
+See [Claude Code documentation](https://code.claude.com/docs/).
 
-- Run `npx @modelcontextprotocol/inspector deepwiki-mcp-clean` to inspect tools and call one.
-- Expected exactly three names: `ask_wiki_question`, `read_wiki_contents`, `read_wiki_structure`.
-- Check OpenCode's next raw request: ordinary DeepWiki instructions remain, but no `devin_*`, `list_wiki_repos`, or `generate_wiki` guidance is included.
-- Claude Code: `/mcp` and try a public repository question via DeepWiki.
-- OpenCode: `opencode mcp list`, then try a public repository question.
-- OMP: `/mcp list` and `/mcp test deepwiki`.
+### Oh My Pi (OMP)
+
+In `~/.omp/agent/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "deepwiki": {
+      "type": "stdio",
+      "command": "deepwiki-mcp-clean",
+      "args": []
+    }
+  }
+}
+```
+
+OMP also supports `instructions: false` on a direct HTTP DeepWiki connection, **but that removes all server instructions**, not just the irrelevant ones. Use this proxy if you want to retain the useful instructions. Check `/mcp list` to ensure OMP selected the intended server when multiple configuration sources exist.
+
+See [OMP MCP configuration](https://github.com/can1357/oh-my-pi/blob/main/docs/mcp-config.md).
+
+### Other environments
+
+Any MCP client supporting local stdio servers can launch the same executable. The essential settings are:
+
+- **Transport:** stdio
+- **Command:** `deepwiki-mcp-clean`
+- **Server name:** `deepwiki` (recommended for compatibility)
+
+No always-running daemon or separate HTTP port is needed. The coding harness starts and stops its own local proxy process.
+
+## Verification
+
+First, run the unit tests:
+
+```bash
+npm test
+```
+
+These test the instruction filter only. To inspect the running MCP server:
+
+```bash
+npx @modelcontextprotocol/inspector deepwiki-mcp-clean
+```
+
+Connect through the Inspector and check:
+
+1. `tools/list` contains exactly `ask_wiki_question`, `read_wiki_contents`, and `read_wiki_structure`.
+2. Server initialization instructions still contain useful wiki guidance, with no `devin_*`, `list_wiki_repos`, or `generate_wiki` references.
+3. Calling one public wiki tool returns a response from DeepWiki.
+
+**The live end-to-end behavior has not been verified by the repository's unit tests.** The Inspector check is an integration test you should run after installation.
 
 ## Limitations
 
-The proxy is a tools-only minimal example, not a fully transparent MCP protocol
-relay. It intentionally does not expose other capabilities that an upstream MCP
-server may add later; that is useful for keeping a fixed small context surface,
-but update the allowlist deliberately if DeepWiki changes public tools.
+- **Tools only:** MCP prompts, resources, server-to-client notifications, cancellation, and upstream authentication are not transparently proxied.
+- **Text-based filter:** The filter removes matching instruction lines, not semantic paragraphs. If DeepWiki changes its instruction format, irrelevant text could remain or a useful matching line could be removed.
+- **Fixed allowlist:** New DeepWiki tools will not appear automatically. Review and explicitly add them when appropriate.
+- **Upstream dependency:** Connection and tool execution depend on the availability and behavior of DeepWiki's public MCP endpoint.
+- **Not an access-control boundary:** This project removes unwanted tool exposure and guidance; it does not sandbox or verify content returned by DeepWiki.
 
-Run `npm test` to verify the instruction filter. The updated proxy has not
-been tested end-to-end against the live DeepWiki service here.
+## Development
 
-## Instruction filtering
+```bash
+npm ci
+npm test
+node --check src/index.mjs
+```
 
-`src/filter-instructions.mjs` removes upstream instruction lines referring to
-`devin_*`, `list_wiki_repos`, or `generate_wiki`, including the Devin
-OAuth/organization preface from the captured response. It retains general
-DeepWiki guidance and instructions for the three public wiki tools.
+| File | Responsibility |
+| --- | --- |
+| `src/index.mjs` | Connects to DeepWiki, registers the local MCP server, and forwards allowlisted tools |
+| `src/filter-instructions.mjs` | Filters unavailable-tool instructions |
+| `test/filter-instructions.test.mjs` | Regression tests for instruction filtering |
 
-If upstream changes to multi-line private-mode paragraphs without repeating a
-filtered tool identifier, the filter and tests will need to be adjusted.
+The executable uses stdout for the MCP JSON-RPC protocol. If you add diagnostic logging, send it to **stderr**, never stdout.
+
+## Status
+
+Early-stage, focused utility. The goal is deliberately narrow: **make the public DeepWiki MCP easier for coding agents to use without losing its useful initialization instructions**.
+
+This project is not affiliated with DeepWiki or Devin.
