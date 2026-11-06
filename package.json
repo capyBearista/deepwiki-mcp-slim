@@ -1,0 +1,16 @@
+{
+  "name": "@capybearista/deepwiki-mcp-clean",
+  "private": true,
+  "version": "0.1.1",
+  "type": "module",
+  "bin": {
+    "deepwiki-mcp-clean": "./src/index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.4.0",
+    "@modelcontextprotocol/server": "2.4.0"
+  }
+}
