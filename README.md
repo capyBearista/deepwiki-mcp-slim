@@ -118,7 +118,7 @@ bun link
 
 Bun 1.4+ must be installed in **each environment where your coding harness runs** (for example, native Windows and WSL are separate environments). Ensure the harness can find `bun`, `bunx`, or `deepwiki-mcp-slim` on its `PATH`. You can inspect the resolved command with `command -v` on Linux/macOS or `where.exe` on Windows.
 
-If a source checkout reports `spawn deepwiki-mcp-slim EACCES` on Linux, check the executable bit:
+If launching a source checkout fails with a permission-denied error (such as `EACCES`) on Linux, check the executable bit:
 
 ```bash
 ls -l src/index.mjs
@@ -212,7 +212,7 @@ First, run the unit tests:
 bun test
 ```
 
-These test the instruction filter and package metadata only. To check that the installed server starts and reaches DeepWiki, send it one `initialize` request:
+These test the instruction filter, package metadata, and that the MCP SDK loads; they do not start the server. To check that the installed server starts and reaches DeepWiki, send it one `initialize` request:
 
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"check","version":"0"}}}' | deepwiki-mcp-slim
@@ -248,7 +248,8 @@ The local MCP server reads its version from `package.json` instead of a separate
 | `src/index.mjs` | Connects to DeepWiki, registers the local MCP server, and forwards allowlisted tools |
 | `src/filter-instructions.mjs` | Filters unavailable-tool instructions |
 | `test/filter-instructions.test.mjs` | Regression tests for instruction filtering |
-| `test/package.test.mjs` | Checks package metadata, the Bun engine, and the CLI entrypoint |
+| `test/package.test.mjs` | Checks package metadata and the CLI entrypoint |
+| `test/runtime.test.mjs` | Checks the MCP SDK imports used by the CLI load under Bun |
 
 The executable uses stdout for the MCP JSON-RPC protocol. If you add diagnostic logging, send it to **stderr**, never stdout.
 
