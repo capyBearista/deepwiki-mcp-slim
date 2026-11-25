@@ -212,7 +212,7 @@ First, run the unit tests:
 bun test
 ```
 
-These test the instruction filter, package metadata, and that the MCP SDK loads; they do not start the server. To check that the installed server starts and reaches DeepWiki, send it one `initialize` request:
+These test the instruction filter, package metadata, and that the CLI's imports resolve under Bun; they do not start the server. To check that the installed server starts and reaches DeepWiki, send it one `initialize` request:
 
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"check","version":"0"}}}' | deepwiki-mcp-slim
@@ -238,7 +238,6 @@ The reply should report `"version":"0.2.0"` and include instructions with useful
 ```bash
 bun install --frozen-lockfile
 bun test
-bun build --no-bundle src/index.mjs > /dev/null
 ```
 
 The local MCP server reads its version from `package.json` instead of a separate hardcoded value.
@@ -249,7 +248,7 @@ The local MCP server reads its version from `package.json` instead of a separate
 | `src/filter-instructions.mjs` | Filters unavailable-tool instructions |
 | `test/filter-instructions.test.mjs` | Regression tests for instruction filtering |
 | `test/package.test.mjs` | Checks package metadata and the CLI entrypoint |
-| `test/runtime.test.mjs` | Checks the MCP SDK imports used by the CLI load under Bun |
+| `test/runtime.test.mjs` | Bundles the CLI with Bun to check its imports resolve, without running it |
 
 The executable uses stdout for the MCP JSON-RPC protocol. If you add diagnostic logging, send it to **stderr**, never stdout.
 
