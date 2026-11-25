@@ -13,8 +13,12 @@ test("npm package is public and exposes the intended CLI", () => {
   assert.equal(pkg.bin["deepwiki-mcp-slim"], "./src/index.mjs");
 });
 
-test("CLI source is present with an executable Node shebang", () => {
+test("package targets the Bun runtime only", () => {
+  assert.deepEqual(pkg.engines, { bun: ">=1.4" });
+});
+
+test("CLI source is present with an executable Bun shebang", () => {
   const entrypoint = readFileSync(new URL("src/index.mjs", root), "utf8");
-  assert.match(entrypoint, /^#!\/usr\/bin\/env node\n/);
+  assert.match(entrypoint, /^#!\/usr\/bin\/env bun\n/);
   assert.match(entrypoint, /new URL\("\.\.\/package\.json", import\.meta\.url\)/);
 });

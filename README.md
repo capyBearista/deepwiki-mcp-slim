@@ -27,7 +27,7 @@ Coding agent (OpenCode / Claude Code / OMP / another MCP client)
        |
        | MCP over stdio
        v
-deepwiki-mcp-slim (local Node.js process)
+deepwiki-mcp-slim (local Bun process)
        |   - allowlist public tools
        |   - filter initialization instructions
        |   - forward tool calls and responses
@@ -51,7 +51,7 @@ This is a **fixed tool allowlist**, not automatic discovery of all future public
 
 ## Requirements
 
-- Node.js **20 or newer** and npm
+- [Bun](https://bun.sh/) **1.4 or newer** (Node.js is not supported)
 - Network access to `https://mcp.deepwiki.com/mcp`
 - An MCP client that can launch a **stdio** server
 
@@ -59,14 +59,14 @@ No DeepWiki API key is required for the public endpoint used by this project. Th
 
 ## Installation
 
-**After the package is first published to npm**, you do not need to clone this repository on each machine. Choose one of the following approaches.
+The package is published to npm but runs on Bun only: its executable starts with `#!/usr/bin/env bun`. You do not need to clone this repository on each machine. Choose one of the following approaches.
 
 ### Option A: Global install
 
 Recommended when you prefer quick, predictable startup:
 
 ```bash
-npm install -g deepwiki-mcp-slim
+bun add -g deepwiki-mcp-slim
 deepwiki-mcp-slim
 ```
 
@@ -75,46 +75,48 @@ The command starts a stdio MCP server and waits for a client to connect. **It is
 Upgrade intentionally with:
 
 ```bash
-npm install -g deepwiki-mcp-slim@latest
+bun add -g deepwiki-mcp-slim@latest
 ```
 
-### Option B: Run with npx
+Make sure Bun's global bin directory (`bun pm bin -g`) is on your `PATH`.
+
+### Option B: Run with bunx
 
 No global install or clone required:
 
 ```bash
-npx -y deepwiki-mcp-slim@0.1.3
+bunx deepwiki-mcp-slim@0.2.0
 ```
 
-This installs the requested package into npm's cache when needed, then starts the MCP server. Use that command in the harness configuration instead of running it manually.
+This installs the requested package into Bun's cache when needed, then starts the MCP server. Use that command in the harness configuration instead of running it manually.
 
-**Version pinning is recommended for coding agents.** Without the explicit `@0.1.3` version, a later launch can resolve a newer release unexpectedly. `-y` disables npm's install confirmation prompt, so use it only for a package you trust.
+**Version pinning is recommended for coding agents.** Without the explicit `@0.2.0` version, a later launch can resolve a newer release unexpectedly.
 
-| | Global install | npx with pinned version |
+| | Global install | bunx with pinned version |
 | --- | --- | --- |
 | One-time installation | Required on each machine | Not required |
-| Launch overhead | Lower | npm startup and package resolution/cache checks |
-| Offline reliability | Installed command works; DeepWiki still needs network | Also requires the package to be present in the npm cache |
+| Launch overhead | Lower | Package resolution/cache checks |
+| Offline reliability | Installed command works; DeepWiki still needs network | Also requires the package to be present in Bun's cache |
 | Updates | You choose when to reinstall | You choose when to change the version in config |
 | Best fit | Frequently launched local agents | Shared, portable MCP configurations |
 
-Neither method removes the proxy's requirement to contact DeepWiki's upstream HTTPS service. The package must be available on npm before either of these commands will work.
+Neither method removes the proxy's requirement to contact DeepWiki's upstream HTTPS service.
 
 ### Install from source (development)
 
 ```bash
 git clone https://github.com/capyBearista/deepwiki-mcp-slim.git
 cd deepwiki-mcp-slim
-npm ci
-npm test
-npm link
+bun install --frozen-lockfile
+bun test
+bun link
 ```
 
-`npm link` makes the local checkout's executable available to harnesses using the same Node/npm installation.
+`bun link` makes the local checkout's executable available to harnesses using the same Bun installation.
 
 ### Notes on environments
 
-Node.js 20+ and npm must be installed in **each environment where your coding harness runs** (for example, native Windows and WSL are separate environments). Ensure the harness can find `npx` or `deepwiki-mcp-slim` on its `PATH`. You can inspect the resolved command with `command -v` on Linux/macOS or `where.exe` on Windows.
+Bun 1.4+ must be installed in **each environment where your coding harness runs** (for example, native Windows and WSL are separate environments). Ensure the harness can find `bun`, `bunx`, or `deepwiki-mcp-slim` on its `PATH`. You can inspect the resolved command with `command -v` on Linux/macOS or `where.exe` on Windows.
 
 If a source checkout reports `spawn deepwiki-mcp-slim EACCES` on Linux, check the executable bit:
 
@@ -123,13 +125,13 @@ ls -l src/index.mjs
 chmod +x src/index.mjs
 ```
 
-The repository tracks `src/index.mjs` as executable. Published npm CLI binaries receive npm's platform-specific executable linking/shims.
+The repository tracks `src/index.mjs` as executable. Global installs receive the package manager's platform-specific executable linking/shims.
 
 ## Configure a coding harness
 
 Configure **`deepwiki-mcp-slim` as a local/stdio server named `deepwiki`**. Replace any existing DeepWiki connection rather than registering both, or your agent may still receive the unfiltered server instructions.
 
-For **npx** instead of a global install, replace the command with `["npx", "-y", "deepwiki-mcp-slim@0.1.3"]` in OpenCode, or use `"command": "npx", "args": ["-y", "deepwiki-mcp-slim@0.1.3"]` in other stdio MCP clients. In either case, make sure the harness can find the executable on `PATH`.
+For **bunx** instead of a global install, replace the command with `["bunx", "deepwiki-mcp-slim@0.2.0"]` in OpenCode, or use `"command": "bunx", "args": ["deepwiki-mcp-slim@0.2.0"]` in other stdio MCP clients. In either case, make sure the harness can find the executable on `PATH`.
 
 ### OpenCode V2
 
@@ -207,22 +209,21 @@ No always-running daemon or separate HTTP port is needed. The coding harness sta
 First, run the unit tests:
 
 ```bash
-npm test
+bun test
 ```
 
-These test the instruction filter only. To inspect the running MCP server:
+These test the instruction filter and package metadata only. To check that the installed server starts and reaches DeepWiki, send it one `initialize` request:
 
 ```bash
-npx @modelcontextprotocol/inspector deepwiki-mcp-slim
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"check","version":"0"}}}' | deepwiki-mcp-slim
 ```
 
-Connect through the Inspector and check:
+The reply should report `"version":"0.2.0"` and include instructions with useful wiki guidance but no `devin_*`, `list_wiki_repos`, or `generate_wiki` references. Then, in your coding harness, check that:
 
-1. `tools/list` contains exactly `ask_wiki_question`, `read_wiki_contents`, and `read_wiki_structure`.
-2. Server initialization instructions still contain useful wiki guidance, with no `devin_*`, `list_wiki_repos`, or `generate_wiki` references.
-3. Calling one public wiki tool returns a response from DeepWiki.
+1. The `deepwiki` server lists exactly `ask_wiki_question`, `read_wiki_contents`, and `read_wiki_structure`.
+2. Calling one public wiki tool returns a response from DeepWiki.
 
-**The live end-to-end behavior has not been verified by the repository's unit tests.** The Inspector check is an integration test you should run after installation.
+**The live end-to-end behavior has not been verified by the repository's unit tests.** Run these checks after installation.
 
 ## Limitations
 
@@ -235,9 +236,9 @@ Connect through the Inspector and check:
 ## Development
 
 ```bash
-npm ci
-npm test
-node --check src/index.mjs
+bun install --frozen-lockfile
+bun test
+bun build --no-bundle src/index.mjs > /dev/null
 ```
 
 The local MCP server reads its version from `package.json` instead of a separate hardcoded value.
@@ -247,7 +248,7 @@ The local MCP server reads its version from `package.json` instead of a separate
 | `src/index.mjs` | Connects to DeepWiki, registers the local MCP server, and forwards allowlisted tools |
 | `src/filter-instructions.mjs` | Filters unavailable-tool instructions |
 | `test/filter-instructions.test.mjs` | Regression tests for instruction filtering |
-| `test/package.test.mjs` | Checks npm package metadata and the CLI entrypoint |
+| `test/package.test.mjs` | Checks package metadata, the Bun engine, and the CLI entrypoint |
 
 The executable uses stdout for the MCP JSON-RPC protocol. If you add diagnostic logging, send it to **stderr**, never stdout.
 
