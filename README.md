@@ -248,7 +248,7 @@ The local MCP server reads its version from `package.json` instead of a separate
 | `src/filter-instructions.mjs` | Filters unavailable-tool instructions |
 | `test/filter-instructions.test.mjs` | Regression tests for instruction filtering |
 | `test/package.test.mjs` | Checks package metadata and the CLI entrypoint |
-| `test/runtime.test.mjs` | Bundles the CLI with Bun to check its imports resolve, without running it |
+| `test/runtime.test.mjs` | Loads the MCP SDK under Bun and bundles the CLI to check its imports resolve, without running it |
 
 The executable uses stdout for the MCP JSON-RPC protocol. If you add diagnostic logging, send it to **stderr**, never stdout.
 
